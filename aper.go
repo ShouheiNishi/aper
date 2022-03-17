@@ -508,7 +508,7 @@ func (pd *perBitData) parseInteger(extensed bool, lowerBoundPtr *int64, upperBou
 	}
 }
 
-func (pd *perBitData) parseEnumerated(extensed bool, lowerBoundPtr *int64, upperBoundPtr *int64) (value uint64,
+func (pd *perBitData) parseEnumerated(extensed bool, lowerBoundPtr *int64, upperBoundPtr *int64, enumExtensionUpperBoundPtr *uint64) (value uint64,
 	err error) {
 	if lowerBoundPtr == nil || upperBoundPtr == nil {
 		err = fmt.Errorf("ENUMERATED value constraint is error")
@@ -523,6 +523,10 @@ func (pd *perBitData) parseEnumerated(extensed bool, lowerBoundPtr *int64, upper
 	if extensed {
 		perTrace(2, fmt.Sprintf("Decoding ENUMERATED with Extensive Value of Range(%d..)", ub+1))
 		if value, err = pd.parseNormallySmallNonNegativeWholeNumber(); err != nil {
+			return
+		}
+		if enumExtensionUpperBoundPtr != nil && value > *enumExtensionUpperBoundPtr-uint64(ub)-1 {
+			err = fmt.Errorf("ENUMERATED extension value is too large")
 			return
 		}
 		value += uint64(ub) + 1
@@ -720,7 +724,7 @@ func parseField(v reflect.Value, pd *perBitData, params fieldParameters) error {
 		}
 	case EnumeratedType:
 		if parsedEnum, err := pd.parseEnumerated(valueExtensible, params.valueLowerBound,
-			params.valueUpperBound); err != nil {
+			params.valueUpperBound, params.enumExtensionUpperBound); err != nil {
 			return err
 		} else {
 			v.SetUint(parsedEnum)

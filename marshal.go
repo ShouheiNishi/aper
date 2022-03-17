@@ -478,7 +478,7 @@ func (pd *perRawBitData) appendInteger(value int64, extensive bool, lowerBoundPt
 }
 
 func (pd *perRawBitData) appendEnumerated(value uint64, extensive bool, lowerBoundPtr *int64,
-	upperBoundPtr *int64) error {
+	upperBoundPtr *int64, enumExtensionUpperBoundPtr *uint64) error {
 	if lowerBoundPtr == nil || upperBoundPtr == nil {
 		return fmt.Errorf("ENUMERATED value constraint is error")
 	}
@@ -501,6 +501,9 @@ func (pd *perRawBitData) appendEnumerated(value uint64, extensive bool, lowerBou
 	} else {
 		if !extensive {
 			return fmt.Errorf("ENUMERATED value is larger than upperbound")
+		}
+		if enumExtensionUpperBoundPtr != nil && value > *enumExtensionUpperBoundPtr {
+			return fmt.Errorf("ENUMERATED value is larger than extensive upperbound")
 		}
 		if err := pd.putBitsValue(1, 1); err != nil {
 			return err
@@ -657,7 +660,7 @@ func (pd *perRawBitData) makeField(v reflect.Value, params fieldParameters) erro
 		err := pd.appendOctetString(v.Bytes(), params.sizeExtensible, params.sizeLowerBound, params.sizeUpperBound)
 		return err
 	case EnumeratedType:
-		err := pd.appendEnumerated(v.Uint(), params.valueExtensible, params.valueLowerBound, params.valueUpperBound)
+		err := pd.appendEnumerated(v.Uint(), params.valueExtensible, params.valueLowerBound, params.valueUpperBound, params.enumExtensionUpperBound)
 		return err
 	}
 	switch val := v; val.Kind() {
